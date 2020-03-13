@@ -3,6 +3,7 @@ import requests
 import json
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+from multiprocessing.pool import ThreadPool
 
 def scrape_story(story_url):
     """scrape a single story"""
@@ -33,6 +34,18 @@ def scrape_story(story_url):
     # print(result)
     return result
 
+def process_row(row, table_headers):
+    line = {}
+    fields = row.select('td')
+    for k, v in zip(table_headers, fields):
+        line[k] = v.text.strip()
+    # the first column holds the link to the story
+    link = fields[0].select_one('a')['href']
+    story_details = scrape_story(f'https://www.allsides.com{link}')
+
+    line = {**line, **story_details}
+    return line
+
 def scrape(output_folder='data'):
     page = 0
     results = []
@@ -45,16 +58,9 @@ def scrape(output_folder='data'):
         rows = soup.select('table tbody tr')
         if not rows:
             break
-        for row in tqdm(rows, desc=f'Page {page}'):
-            line = {}
-            fields = row.select('td')
-            for k, v in zip(table_headers, fields):
-                line[k] = v.text.strip()
-            # the first column holds the link to the story
-            link = fields[0].select_one('a')['href']
-            story_details = scrape_story(f'https://www.allsides.com{link}')
-
-            line = {**line, **story_details}
+        wrapper = lambda row: process_row(row, table_headers)
+        pool = ThreadPool(16)
+        for line in tqdm(pool.imap(wrapper, rows), total=len(rows), desc=f'Page {page}'):
             # print(line)
             results.append(line)
 

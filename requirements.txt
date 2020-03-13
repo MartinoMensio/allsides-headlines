@@ -1,0 +1,8 @@
+typer
+requests
+beautifulsoup4
+lxml
+tqdm
+
+pylint
+autopep8

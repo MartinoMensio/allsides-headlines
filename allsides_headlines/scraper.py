@@ -47,9 +47,20 @@ def process_row(row, table_headers):
     return line
 
 def scrape(output_folder='data'):
+    file_path = f'{output_folder}/headlines.json'
+    
+    # load headlines if they have already been scraped
+    prev_results = []
+    if not os.path.isdir(output_folder):
+        os.makedirs(output_folder)
+    if os.path.isfile(file_path):
+        with open(file_path) as f:
+            prev_results = json.load(f)
+    
+    new_results = []
     page = 0
-    results = []
-    while True:
+    stop = False
+    while not stop:
         headline_list_url = f'https://www.allsides.com/story/admin?page={page}'
         response = requests.get(headline_list_url)
         response.raise_for_status()
@@ -61,14 +72,21 @@ def scrape(output_folder='data'):
         wrapper = lambda row: process_row(row, table_headers)
         pool = ThreadPool(16)
         for line in tqdm(pool.imap(wrapper, rows), total=len(rows), desc=f'Page {page}'):
+            print(line['url'])
             # print(line)
-            results.append(line)
+
+            if any(el['url'] == line['url'] for el in prev_results):
+                print('found', line['url'], ': terminating now')
+                stop = True
+                break
+            else:
+                new_results.append(line)
 
         page += 1
-        # break
-    
-    if not os.path.isdir(output_folder):
-        os.makedirs(output_folder)
+
+
+    # keep the order
+    results = new_results + prev_results
     with open(f'{output_folder}/headlines.json', 'w') as f:
         json.dump(results, f, indent=2)
 

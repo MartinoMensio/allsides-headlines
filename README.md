@@ -7,7 +7,7 @@ This repository allows you to retrieve the aggregation performed by [AllSides](h
 ```bash
 virtualenv venv
 source venv/bin/activate
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Running the scraper

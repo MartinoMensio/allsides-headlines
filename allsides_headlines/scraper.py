@@ -18,7 +18,7 @@ def scrape_story(story_url, retries=5):
         soup = BeautifulSoup(response.text, features='lxml')
         sides = soup.select('div.quicktabs-views-group')
         description = soup.select_one('div.story-id-page-description')
-        descr_string = ''.join([str(x) for x in description.contents]).replace('target="_blank"', '').replace('rel="nofollow"', '')
+        descr_string = ''.join([str(x) for x in description.contents]).replace('target="_blank"', '').replace('target="blank"', '').replace('rel="nofollow"', '')
         markdown_description = html2markdown.convert(descr_string)
         result = {
             'url': story_url,

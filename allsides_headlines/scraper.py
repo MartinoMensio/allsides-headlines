@@ -1,13 +1,16 @@
 import os
-import requests
 import json
+import time
+import requests
 import html2markdown
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from multiprocessing.pool import ThreadPool
 
-def scrape_story(story_url):
+def scrape_story(story_url, retries=5):
     """scrape a single story"""
+    if retries < 1:
+        raise ValueError('Not enough retries available')
     try:
         response = requests.get(story_url)
         response.raise_for_status()
@@ -36,7 +39,10 @@ def scrape_story(story_url):
             })
     except Exception as e:
         print(story_url)
-        raise e
+        print(f'waiting some time because of {e}')
+        time.sleep(10)
+        print(f'retrying url {story_url}')
+        return scrape_story(story_url, retries=retries-1)
     # print(result)
     return result
 
@@ -76,7 +82,7 @@ def scrape(output_folder='data'):
         if not rows:
             break
         wrapper = lambda row: process_row(row, table_headers)
-        pool = ThreadPool(4)
+        pool = ThreadPool(8)
         for line in tqdm(pool.imap(wrapper, rows), total=len(rows), desc=f'Page {page}'):
             # print(line['url'])
 

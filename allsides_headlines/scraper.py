@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+import html2markdown
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from multiprocessing.pool import ThreadPool
@@ -10,11 +11,16 @@ def scrape_story(story_url):
     try:
         response = requests.get(story_url)
         response.raise_for_status()
+
         soup = BeautifulSoup(response.text, features='lxml')
         sides = soup.select('div.quicktabs-views-group')
+        description = soup.select_one('div.story-id-page-description')
+        descr_string = ''.join([str(x) for x in description.contents]).replace('target="_blank"', '').replace('rel="nofollow"', '')
+        markdown_description = html2markdown.convert(descr_string)
         result = {
             'url': story_url,
-            'articles': []
+            'articles': [],
+            'description': markdown_description
         }
         for side in sides:
             source_bias = side.select_one('div.bias-image img')
@@ -70,10 +76,9 @@ def scrape(output_folder='data'):
         if not rows:
             break
         wrapper = lambda row: process_row(row, table_headers)
-        pool = ThreadPool(16)
+        pool = ThreadPool(4)
         for line in tqdm(pool.imap(wrapper, rows), total=len(rows), desc=f'Page {page}'):
-            print(line['url'])
-            # print(line)
+            # print(line['url'])
 
             if any(el['url'] == line['url'] for el in prev_results):
                 print('found', line['url'], ': terminating now')

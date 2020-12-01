@@ -58,7 +58,7 @@ def process_row(row, table_headers):
     line = {**line, **story_details}
     return line
 
-def scrape(output_folder='data'):
+def scrape_headlines(output_folder):
     file_path = f'{output_folder}/headlines.json'
     
     # load headlines if they have already been scraped
@@ -101,3 +101,63 @@ def scrape(output_folder='data'):
     with open(f'{output_folder}/headlines.json', 'w') as f:
         json.dump(results, f, indent=2)
 
+def scrape_biases(output_folder):
+    # TODO scrape detail page, where there is a link to the source homepage 
+    results = []
+    page = 0
+    stop = False
+    while not stop:
+        print('page', page)
+        params = {
+            'page': page,
+            'field_featured_bias_rating_value': 'All', # All or featured
+            'field_news_source_type_tid[1]': '1', # Type: Author
+            'field_news_source_type_tid[2]': '2', # Type: News Media
+            'field_news_source_type_tid[3]': '3', # Type: Think Tank / Policy Group
+            'field_news_source_type_tid[4]': '4', # Type: Reference
+            'field_news_bias_nid_1[1]': '1', # Bias Rating: Left
+            'field_news_bias_nid_1[2]': '2', # Bias Rating: Center or Mixed
+            'field_news_bias_nid_1[3]': '3', # Bias Rating: Right
+            'field_news_bias_nid_1[4]': '4', # Bias Rating: Not Rated
+        }
+        res = requests.get('https://www.allsides.com/media-bias/media-bias-ratings', params=params)
+        res.raise_for_status()
+
+        text = res.text
+        soup = BeautifulSoup(text, features='lxml')
+
+        headers = [el.text.strip() for el in soup.select('table thead tr th')]
+        
+        rows = soup.select('table tbody tr')
+        if not rows:
+            break
+        for r in rows:
+            fields = r.select('td')
+            source_name = fields[0].text.strip()
+            source_details_url = fields[0].select_one('a')
+            if not source_details_url:
+                stop = True
+                break
+            source_details_url = source_details_url['href']
+            bias_label = fields[1].select_one('a')['href'].split('/')[-1]
+            agree_cnt = int(fields[3].select_one('.agree').text.strip())
+            disagree_cnt = int(fields[3].select_one('.disagree').text.strip())
+            results.append({
+                'name': source_name,
+                'details_url': source_details_url,
+                'bias_label': bias_label,
+                'agree_cnt': agree_cnt,
+                'disagree_cnt': disagree_cnt
+            })
+        page += 1
+
+    # 800+ sources --> 50 per page --> pages: 16+ --> 30 pages (with also unrated sources)
+    # https://www.allsides.com/media-bias/media-bias-ratings?page=1&field_featured_bias_rating_value=All&field_news_source_type_tid%5B1%5D=1&field_news_source_type_tid%5B2%5D=2&field_news_source_type_tid%5B3%5D=3&field_news_source_type_tid%5B4%5D=4&field_news_bias_nid_1%5B1%5D=1&field_news_bias_nid_1%5B2%5D=2&field_news_bias_nid_1%5B3%5D=3&field_news_bias_nid_1%5B4%5D=4&title=
+
+    with open(f'{output_folder}/sources.json', 'w') as f:
+        json.dump(results, f, indent=2)
+
+
+def scrape(output_folder='data'):
+    scrape_headlines(output_folder)
+    # scrape_biases(output_folder)

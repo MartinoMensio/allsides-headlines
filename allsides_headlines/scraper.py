@@ -32,10 +32,24 @@ def scrape_story(story_url, retries=5):
                 source_bias = source_bias['title'].split(':')[-1].strip()
             source = side.select_one('div.news-source').text.strip()
             article_url = side.select_one('div.read-more-story a')['href']
+            article_title = side.select_one('div.news-title').text.strip()
+            body = side.select_one('div.news-body')
+            body_truncated = body.text.strip()
+            spans = body.select('span')
+            has_span = True if spans else False
+            if has_span:
+                content_category = spans[0].text.strip()
+                body_truncated = body_truncated.replace(content_category, '', 1).strip()
+            else:
+                content_category = 'NEWS'
+            
             result['articles'].append({
                 'source': source,
                 'bias': source_bias,
-                'url': article_url
+                'url': article_url,
+                'title': article_title,
+                'body_truncated': body_truncated,
+                'content_category': content_category
             })
     except Exception as e:
         print(story_url)

@@ -2,6 +2,9 @@
 
 This repository allows you to retrieve the aggregation performed by [AllSides](https://www.allsides.com/story/admin).
 
+TODO:
+look at news/topics headers on homepage https://www.allsides.com/ to discover more articles
+
 ## Installation
 
 ```bash

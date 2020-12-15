@@ -4,6 +4,7 @@ beautifulsoup4
 lxml
 tqdm
 html2markdown
+git+https://github.com/JustAnotherArchivist/snscrape.git
 
 pylint
 autopep8
